@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using LinkMatch.Core.Utils;
 using LinkMatch.Game.Chips;
 using LinkMatch.Game.Inputs;
@@ -22,13 +23,14 @@ namespace LinkMatch.Game.Board
         private BoardModel _model;
         private Chip[,] _chipViews;
         private ILinkPathValidator _validator;
+        private readonly List<Coord> _path = new();
 
         private void Start()
         {
             _model = new BoardModel(levelConfig.rows, levelConfig.cols);
             _chipViews = new Chip[levelConfig.rows, levelConfig.cols];
             _validator = new LinkPathValidator(minLength: 3);
-            
+
             // BoardController.Start() içinde, BuildTiles()'dan önce:
             var tileSR = tilePrefab.GetComponent<SpriteRenderer>();
             if (tileSR != null)
@@ -68,20 +70,57 @@ namespace LinkMatch.Game.Board
 
         private void OnPressed(Vector3 world)
         {
-            if (TryWorldToCoord(world, out var coord))
-                Debug.Log($"PRESS @ {coord.Row},{coord.Col}");
+            if (!TryWorldToCoord(world, out var c)) return;
+
+            var type = _model.Get(c);
+            if (!_validator.CanStart(type)) return;
+
+            ClearSelection();
+            _path.Clear();
+            _path.Add(c);
+            _chipViews[c.Row, c.Col]?.SetSelected(true);
+            Debug.Log($"PATH START @ {c.Row},{c.Col} type={type}");
         }
 
         private void OnDragged(Vector3 world)
         {
-            if (TryWorldToCoord(world, out var coord))
-                Debug.Log($"DRAG  @ {coord.Row},{coord.Col}");
+            if (_path.Count == 0) return;
+            if (!TryWorldToCoord(world, out var c)) return;
+
+            // Backtrack: bir önceki düğüme geri dönüyorsak son node’u kaldır
+            if (_path.Count >= 2 && c.Row == _path[^2].Row && c.Col == _path[^2].Col)
+            {
+                var removed = _path[^1];
+                _path.RemoveAt(_path.Count - 1);
+                _chipViews[removed.Row, removed.Col]?.SetSelected(false);
+                return;
+            }
+
+            // Normal ekleme
+            if (_validator.CanAppend(_path, c, GetGridSnapshot()))
+            {
+                _path.Add(c);
+                _chipViews[c.Row, c.Col]?.SetSelected(true);
+                Debug.Log($"PATH ADD @ {c.Row},{c.Col}");
+            }
         }
 
         private void OnReleased(Vector3 world)
         {
-            if (TryWorldToCoord(world, out var coord))
-                Debug.Log($"RELEASE @ {coord.Row},{coord.Col}");
+            if (_path.Count == 0) return;
+
+            bool valid = _validator.IsValidOnRelease(_path);
+            Debug.Log(valid ? $"PATH VALID len={_path.Count}" : "PATH INVALID");
+
+            if (!valid)
+            {
+                ClearSelection();
+                _path.Clear();
+                return;
+            }
+
+            ClearSelection();
+            _path.Clear();
         }
 
         private bool TryWorldToCoord(Vector3 world, out Coord coord)
@@ -121,24 +160,39 @@ namespace LinkMatch.Game.Board
                     var type = (ChipType)Random.Range(1, 5); // 1..4
                     _model.Set(coord, type);
 
-                    Vector3 pos = ToWorld(r, c); 
+                    Vector3 pos = ToWorld(r, c);
                     var go = Instantiate(chipPrefab, pos, Quaternion.identity, boardRoot);
                     var chip = go.GetComponent<Chip>();
                     chip.Init(type, chipPalette.GetSprite(type));
                     _chipViews[r, c] = chip;
                 }
         }
-        
+
         private Vector3 ToWorld(int row, int col)
         {
-            float width  = levelConfig.cols * cellSize;
+            float width = levelConfig.cols * cellSize;
             float height = levelConfig.rows * cellSize;
 
             // Alt-sol köşeyi (-width/2, -height/2) al, hücrenin merkezine oturt
-            float originX = -width  * 0.5f + (cellSize * 0.5f);
+            float originX = -width * 0.5f + (cellSize * 0.5f);
             float originY = -height * 0.5f + (cellSize * 0.5f);
 
             return new Vector3(originX + col * cellSize, originY + row * cellSize, 0f);
+        }
+        
+        private void ClearSelection()
+        {
+            foreach (var c in _path)
+                _chipViews[c.Row, c.Col]?.SetSelected(false);
+        }
+
+        private ChipType[,] GetGridSnapshot()
+        {
+            var g = new ChipType[_model.Rows, _model.Cols];
+            for (int r = 0; r < _model.Rows; r++)
+                for (int c = 0; c < _model.Cols; c++)
+                    g[r, c] = _model.Get(new Coord(r, c));
+            return g;
         }
     }
 }
