@@ -23,18 +23,22 @@ namespace LinkMatch.Game.Board
 
         private void Start()
         {
-            _model     = new BoardModel(levelConfig.rows, levelConfig.cols);
+            _model = new BoardModel(levelConfig.rows, levelConfig.cols);
             _chipViews = new Chip[levelConfig.rows, levelConfig.cols];
             // BoardController.Start() içinde, BuildTiles()'dan önce:
             var tileSR = tilePrefab.GetComponent<SpriteRenderer>();
             if (tileSR != null)
             {
                 // sprite’ın dünyadaki genişliği (scale ve PPU dahil)
-                var worldWidth = tileSR.bounds.size.x; 
+                var worldWidth = tileSR.bounds.size.x;
                 if (worldWidth > 0f) cellSize = worldWidth;
             }
             BuildTiles();
             SpawnInitialChips();
+
+            var fitter = Camera.main ? Camera.main.GetComponent<CameraAutoFit>() : null;
+            if (fitter != null)
+                fitter.Fit(levelConfig.rows, levelConfig.cols, cellSize);
         }
 
         private void OnEnable()
@@ -42,8 +46,8 @@ namespace LinkMatch.Game.Board
             if (!inputService) inputService = FindAnyObjectByType<UnityInputService>();
             if (inputService)
             {
-                inputService.PressedWorld  += OnPressed;
-                inputService.DraggedWorld  += OnDragged;
+                inputService.PressedWorld += OnPressed;
+                inputService.DraggedWorld += OnDragged;
                 inputService.ReleasedWorld += OnReleased;
             }
         }
@@ -52,8 +56,8 @@ namespace LinkMatch.Game.Board
         {
             if (inputService)
             {
-                inputService.PressedWorld  -= OnPressed;
-                inputService.DraggedWorld  -= OnDragged;
+                inputService.PressedWorld -= OnPressed;
+                inputService.DraggedWorld -= OnDragged;
                 inputService.ReleasedWorld -= OnReleased;
             }
         }
@@ -95,30 +99,42 @@ namespace LinkMatch.Game.Board
         private void BuildTiles()
         {
             for (int r = 0; r < _model.Rows; r++)
-            for (int c = 0; c < _model.Cols; c++)
-            {
-                var pos   = new Vector3(c * cellSize, r * cellSize, 0f);
-                var go    = Instantiate(tilePrefab, pos, Quaternion.identity, boardRoot);
-                var tile  = go.GetComponent<Tile>();
-                tile.Init(new Coord(r, c));
-            }
+                for (int c = 0; c < _model.Cols; c++)
+                {
+                    var pos = ToWorld(r, c);
+                    var go = Instantiate(tilePrefab, pos, Quaternion.identity, boardRoot);
+                    var tile = go.GetComponent<Tile>();
+                    tile.Init(new Coord(r, c));
+                }
         }
 
         private void SpawnInitialChips()
         {
             for (int r = 0; r < _model.Rows; r++)
-            for (int c = 0; c < _model.Cols; c++)
-            {
-                var coord = new Coord(r, c);
-                var type  = (ChipType)Random.Range(1, 5); // 1..4
-                _model.Set(coord, type);
+                for (int c = 0; c < _model.Cols; c++)
+                {
+                    var coord = new Coord(r, c);
+                    var type = (ChipType)Random.Range(1, 5); // 1..4
+                    _model.Set(coord, type);
 
-                var pos  = new Vector3(c * cellSize, r * cellSize, 0f);
-                var go   = Instantiate(chipPrefab, pos, Quaternion.identity, boardRoot);
-                var chip = go.GetComponent<Chip>();
-                chip.Init(type, chipPalette.GetSprite(type));
-                _chipViews[r, c] = chip;
-            }
+                    Vector3 pos = ToWorld(r, c); 
+                    var go = Instantiate(chipPrefab, pos, Quaternion.identity, boardRoot);
+                    var chip = go.GetComponent<Chip>();
+                    chip.Init(type, chipPalette.GetSprite(type));
+                    _chipViews[r, c] = chip;
+                }
+        }
+        
+        private Vector3 ToWorld(int row, int col)
+        {
+            float width  = levelConfig.cols * cellSize;
+            float height = levelConfig.rows * cellSize;
+
+            // Alt-sol köşeyi (-width/2, -height/2) al, hücrenin merkezine oturt
+            float originX = -width  * 0.5f + (cellSize * 0.5f);
+            float originY = -height * 0.5f + (cellSize * 0.5f);
+
+            return new Vector3(originX + col * cellSize, originY + row * cellSize, 0f);
         }
     }
 }
