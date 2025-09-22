@@ -1,6 +1,7 @@
 using LinkMatch.Core.Utils;
 using LinkMatch.Game.Chips;
 using LinkMatch.Game.Inputs;
+using LinkMatch.Game.Strategies;
 using UnityEngine;
 
 namespace LinkMatch.Game.Board
@@ -20,11 +21,14 @@ namespace LinkMatch.Game.Board
 
         private BoardModel _model;
         private Chip[,] _chipViews;
+        private ILinkPathValidator _validator;
 
         private void Start()
         {
             _model = new BoardModel(levelConfig.rows, levelConfig.cols);
             _chipViews = new Chip[levelConfig.rows, levelConfig.cols];
+            _validator = new LinkPathValidator(minLength: 3);
+            
             // BoardController.Start() içinde, BuildTiles()'dan önce:
             var tileSR = tilePrefab.GetComponent<SpriteRenderer>();
             if (tileSR != null)
