@@ -38,7 +38,7 @@ namespace LinkMatch.Game.Board
         {
             _model = new BoardModel(levelConfig.rows, levelConfig.cols);
             _chipViews = new Chip[levelConfig.rows, levelConfig.cols];
-            _validator = new LinkPathValidator(minLength: 3, allowDiagonal: true);
+            _validator = new LinkPathValidator(minLength: 3);
             _rng = new System.Random();
             _chipFactory = new ChipFactory(chipPrefab, chipPalette);
             _fill = new GravityFillStrategy();
