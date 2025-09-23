@@ -18,15 +18,20 @@ namespace LinkMatch.Game.Chips
 
         public void Init(ChipType type, Sprite sprite)
         {
-            Type = type;
-            if (_sr == null) _sr = GetComponent<SpriteRenderer>();
-            _sr.sprite = sprite;
+            SetType(type, sprite);
         }
 
         public void SetSelected(bool on)
         {
             // Basit görsel feedback: scale büyüt/küçült
             transform.localScale = on ? _baseScale * 1.1f : _baseScale;
+        }
+
+        public void SetType(ChipType type, Sprite sprite)
+        {
+            Type = type;
+            if (_sr == null) _sr = GetComponent<SpriteRenderer>();
+            _sr.sprite = sprite;
         }
     }
 }

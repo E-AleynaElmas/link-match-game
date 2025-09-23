@@ -25,6 +25,9 @@ namespace LinkMatch.Game.Board
         [SerializeField] private float fallDuration = 0.08f;
         [SerializeField] private float popDuration = 0.06f;
 
+        [Header("Shuffle Settings")]
+        [SerializeField] private int shuffleMaxRetries = 50;
+
         private BoardModel _model;
         private Chip[,] _chipViews;
         private ILinkPathValidator _validator;
@@ -33,6 +36,7 @@ namespace LinkMatch.Game.Board
         private ChipFactory _chipFactory;
         private System.Random _rng;
         private bool _busy;
+        private IShuffleStrategy _shuffle;
 
         private void Start()
         {
@@ -42,6 +46,7 @@ namespace LinkMatch.Game.Board
             _rng = new System.Random();
             _chipFactory = new ChipFactory(chipPrefab, chipPalette);
             _fill = new GravityFillStrategy();
+            _shuffle = new SimpleShuffleStrategy();
 
             // BoardController.Start() içinde, BuildTiles()'dan önce:
             var tileSR = tilePrefab.GetComponent<SpriteRenderer>();
@@ -53,6 +58,9 @@ namespace LinkMatch.Game.Board
             }
             BuildTiles();
             SpawnInitialChips();
+
+            if (!_shuffle.HasAnyMove(_model))
+                StartCoroutine(ShuffleRoutine());
 
             var fitter = Camera.main ? Camera.main.GetComponent<CameraAutoFit>() : null;
             if (fitter != null)
@@ -233,9 +241,12 @@ namespace LinkMatch.Game.Board
                 fallDuration
             );
 
+            if (!_shuffle.HasAnyMove(_model))
+                yield return ShuffleRoutine();
+
             _busy = false;
         }
-        
+
         private ChipType NextRandomType()
         {
             // 1..4 arası
@@ -261,7 +272,7 @@ namespace LinkMatch.Game.Board
 
                 // küçük bir pop
                 Vector3 from = chip.transform.localScale;
-                Vector3 to   = from * 1.15f;
+                Vector3 to = from * 1.15f;
                 float t = 0f;
                 while (t < popDuration)
                 {
@@ -272,6 +283,66 @@ namespace LinkMatch.Game.Board
                 }
 
                 Destroy(chip.gameObject);
+            }
+        }
+        
+        private IEnumerator ShuffleRoutine()
+        {
+            _busy = true;
+
+            int retries = 0;
+            do
+            {
+                retries++;
+                // 1) Modeli karıştır
+                _shuffle.Shuffle(_model, _rng);
+
+                // 2) Görseli modele uydur (pozisyonlar sabit, sadece tip/sprite değiştiriyoruz)
+                for (int r = 0; r < _model.Rows; r++)
+                for (int c = 0; c < _model.Cols; c++)
+                {
+                    var chip = _chipViews[r, c];
+                    if (!chip) continue;
+
+                    var t = _model.Get(new Coord(r, c));
+                    chip.SetSelected(false);
+                    chip.SetType(t, chipPalette.GetSprite(t));
+                }
+
+                // 3) Küçük bir “pulse” ile karıştığını hissettir
+                yield return PulseAllChips(1.05f, 0.08f);
+
+            } while (!_shuffle.HasAnyMove(_model) && retries < shuffleMaxRetries);
+
+            _busy = false;
+        }
+
+        private IEnumerator PulseAllChips(float scale, float dur)
+        {
+            // Basit toplu ölçek animasyonu (in → out)
+            var originals = new System.Collections.Generic.List<Transform>();
+            foreach (var chip in _chipViews)
+                if (chip) originals.Add(chip.transform);
+
+            // up
+            float t = 0f;
+            while (t < dur)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / dur);
+                float s = Mathf.Lerp(1f, scale, k);
+                foreach (var tr in originals) tr.localScale = Vector3.one * s;
+                yield return null;
+            }
+            // down
+            t = 0f;
+            while (t < dur)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / dur);
+                float s = Mathf.Lerp(scale, 1f, k);
+                foreach (var tr in originals) tr.localScale = Vector3.one * s;
+                yield return null;
             }
         }
     }
