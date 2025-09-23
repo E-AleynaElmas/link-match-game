@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using LinkMatch.Core.Utils;
 using LinkMatch.Game.Chips;
@@ -20,16 +21,27 @@ namespace LinkMatch.Game.Board
         [Header("Board Settings")]
         [SerializeField] private float cellSize = 1f;
 
+        [Header("Animation Settings")]
+        [SerializeField] private float fallDuration = 0.08f;
+        [SerializeField] private float popDuration = 0.06f;
+
         private BoardModel _model;
         private Chip[,] _chipViews;
         private ILinkPathValidator _validator;
         private readonly List<Coord> _path = new();
+        private IFillStrategy _fill;
+        private ChipFactory _chipFactory;
+        private System.Random _rng;
+        private bool _busy;
 
         private void Start()
         {
             _model = new BoardModel(levelConfig.rows, levelConfig.cols);
             _chipViews = new Chip[levelConfig.rows, levelConfig.cols];
             _validator = new LinkPathValidator(minLength: 3, allowDiagonal: true);
+            _rng = new System.Random();
+            _chipFactory = new ChipFactory(chipPrefab, chipPalette);
+            _fill = new GravityFillStrategy();
 
             // BoardController.Start() içinde, BuildTiles()'dan önce:
             var tileSR = tilePrefab.GetComponent<SpriteRenderer>();
@@ -70,6 +82,8 @@ namespace LinkMatch.Game.Board
 
         private void OnPressed(Vector3 world)
         {
+            if (_busy) return;
+
             if (!TryWorldToCoord(world, out var c)) return;
 
             var type = _model.Get(c);
@@ -84,6 +98,8 @@ namespace LinkMatch.Game.Board
 
         private void OnDragged(Vector3 world)
         {
+            if (_busy) return;
+
             if (_path.Count == 0) return;
             if (!TryWorldToCoord(world, out var c)) return;
 
@@ -107,11 +123,10 @@ namespace LinkMatch.Game.Board
 
         private void OnReleased(Vector3 world)
         {
+            if (_busy) return;
             if (_path.Count == 0) return;
 
             bool valid = _validator.IsValidOnRelease(_path);
-            Debug.Log(valid ? $"PATH VALID len={_path.Count}" : "PATH INVALID");
-
             if (!valid)
             {
                 ClearSelection();
@@ -119,8 +134,7 @@ namespace LinkMatch.Game.Board
                 return;
             }
 
-            ClearSelection();
-            _path.Clear();
+            StartCoroutine(ResolveValidPath());
         }
 
         private bool TryWorldToCoord(Vector3 world, out Coord coord)
@@ -179,7 +193,7 @@ namespace LinkMatch.Game.Board
 
             return new Vector3(originX + col * cellSize, originY + row * cellSize, 0f);
         }
-        
+
         private void ClearSelection()
         {
             foreach (var c in _path)
@@ -193,6 +207,72 @@ namespace LinkMatch.Game.Board
                 for (int c = 0; c < _model.Cols; c++)
                     g[r, c] = _model.Get(new Coord(r, c));
             return g;
+        }
+
+        private IEnumerator ResolveValidPath()
+        {
+            _busy = true;
+
+            // 1) Modelde None yap
+            foreach (var c in _path)
+                _model.Set(c, ChipType.None);
+
+            // 2) Pop animasyonu + GO'ları sil
+            yield return PopAndDestroy(_path);
+
+            // Path’i temizle
+            _path.Clear();
+
+            // 3) Gravity fill (kolon kolon)
+            yield return _fill.Fill(
+                _model,
+                _chipViews,
+                (r, c) => ToWorld(r, c),
+                NextRandomType,
+                SpawnChip,
+                fallDuration
+            );
+
+            _busy = false;
+        }
+        
+        private ChipType NextRandomType()
+        {
+            // 1..4 arası
+            int v = _rng.Next(1, 5);
+            return (ChipType)v;
+        }
+
+        private Chip SpawnChip(ChipType t, Vector3 worldPos)
+        {
+            return _chipFactory.Create(boardRoot, worldPos, t);
+        }
+
+        private IEnumerator PopAndDestroy(System.Collections.Generic.List<Coord> coords)
+        {
+            // Basit: scale-up ve destroy
+            foreach (var c in coords)
+            {
+                var chip = _chipViews[c.Row, c.Col];
+                if (!chip) continue;
+
+                // view dizisinden düş
+                _chipViews[c.Row, c.Col] = null;
+
+                // küçük bir pop
+                Vector3 from = chip.transform.localScale;
+                Vector3 to   = from * 1.15f;
+                float t = 0f;
+                while (t < popDuration)
+                {
+                    t += Time.deltaTime;
+                    float k = Mathf.Clamp01(t / popDuration);
+                    chip.transform.localScale = Vector3.Lerp(from, to, k);
+                    yield return null;
+                }
+
+                Destroy(chip.gameObject);
+            }
         }
     }
 }
