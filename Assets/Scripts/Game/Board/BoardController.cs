@@ -29,7 +29,7 @@ namespace LinkMatch.Game.Board
         {
             _model = new BoardModel(levelConfig.rows, levelConfig.cols);
             _chipViews = new Chip[levelConfig.rows, levelConfig.cols];
-            _validator = new LinkPathValidator(minLength: 3);
+            _validator = new LinkPathValidator(minLength: 3, allowDiagonal: true);
 
             // BoardController.Start() içinde, BuildTiles()'dan önce:
             var tileSR = tilePrefab.GetComponent<SpriteRenderer>();
