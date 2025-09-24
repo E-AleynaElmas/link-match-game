@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using LinkMatch.Core.Signals;
 using LinkMatch.Core.Utils;
 using LinkMatch.Game.Chips;
 using LinkMatch.Game.Inputs;
@@ -28,6 +29,9 @@ namespace LinkMatch.Game.Board
         [Header("Shuffle Settings")]
         [SerializeField] private int shuffleMaxRetries = 50;
 
+        [Header("Debug")]
+        [SerializeField] private int initialMovesOverride = -1;
+
         private BoardModel _model;
         private Chip[,] _chipViews;
         private ILinkPathValidator _validator;
@@ -37,6 +41,8 @@ namespace LinkMatch.Game.Board
         private System.Random _rng;
         private bool _busy;
         private IShuffleStrategy _shuffle;
+        private int _score;
+        private int _movesLeft;
 
         private void Start()
         {
@@ -65,6 +71,12 @@ namespace LinkMatch.Game.Board
             var fitter = Camera.main ? Camera.main.GetComponent<CameraAutoFit>() : null;
             if (fitter != null)
                 fitter.Fit(levelConfig.rows, levelConfig.cols, cellSize);
+
+            _movesLeft = (initialMovesOverride > 0) ? initialMovesOverride : levelConfig.initialMoves;
+            _score = 0;
+            GameSignals.ScoreChanged(_score);
+            GameSignals.MovesChanged(_movesLeft);
+            GameSignals.BoardBusy(false);
         }
 
         private void OnEnable()
@@ -220,33 +232,60 @@ namespace LinkMatch.Game.Board
         private IEnumerator ResolveValidPath()
         {
             _busy = true;
+            GameSignals.BoardBusy(true);
+
+            int removedCount = _path.Count;
 
             // 1) Modelde None yap
             foreach (var c in _path)
                 _model.Set(c, ChipType.None);
 
-            // 2) Pop animasyonu + GO'ları sil
+            // 2) Pop + Destroy
             yield return PopAndDestroy(_path);
 
-            // Path’i temizle
             _path.Clear();
 
-            // 3) Gravity fill (kolon kolon)
+            // 3) Skor & Hamle
+            _score += removedCount;
+            _movesLeft -= 1;
+            GameSignals.ScoreChanged(_score);
+            GameSignals.MovesChanged(_movesLeft);
+            
+            // 4) Gravity Fill
             yield return _fill.Fill(
-                _model,
-                _chipViews,
+                _model, _chipViews,
                 (r, c) => ToWorld(r, c),
-                NextRandomType,
-                SpawnChip,
+                NextRandomType, SpawnChip,
                 fallDuration
             );
 
+            if (_score >= levelConfig.targetScore)
+            {
+                GameSignals.GameOver(true);
+                _busy = false;
+                GameSignals.BoardBusy(false);
+                yield break; // moves bekleme, fill/shuffle yapmadan oyunu bitir
+            }
+            
+
+            // 5) Moves bitti mi? Win/Lose
+            if (_movesLeft <= 0)
+            {
+                bool win = _score >= levelConfig.targetScore;
+                GameSignals.GameOver(win);
+                _busy = false;
+                GameSignals.BoardBusy(false);
+                yield break; // oyun biter, input kilitli kalabilir veya panel üstüne oynanmaz
+            }
+
+            // 6) Oynanabilirlik garantisi
             if (!_shuffle.HasAnyMove(_model))
                 yield return ShuffleRoutine();
 
             _busy = false;
+            GameSignals.BoardBusy(false);
         }
-
+        
         private ChipType NextRandomType()
         {
             // 1..4 arası
