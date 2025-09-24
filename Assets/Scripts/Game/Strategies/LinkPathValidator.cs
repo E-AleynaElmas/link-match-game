@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using LinkMatch.Core.Utils;
 using LinkMatch.Game.Chips;
@@ -18,7 +19,7 @@ namespace LinkMatch.Game.Strategies
 
         public bool CanStart(ChipType headType) => headType != ChipType.None;
 
-        public bool CanAppend(IReadOnlyList<Coord> path, Coord next, ChipType[,] grid)
+        public bool CanAppend(IReadOnlyList<Coord> path, Coord next, Func<Coord, ChipType> get)
         {
             if (path == null || path.Count == 0) return false;
 
@@ -35,7 +36,7 @@ namespace LinkMatch.Game.Strategies
             if (!adjacent) return false;
 
             var first = path[0];
-            if (grid[next.Row, next.Col] != grid[first.Row, first.Col]) return false;
+            if (get(next) != get(first)) return false;
 
             // tekrar ziyaret yok (backtrack'i controller yönetiyor)
             for (int i = 0; i < path.Count; i++)

@@ -133,7 +133,7 @@ namespace LinkMatch.Game.Board
             }
 
             // Normal ekleme
-            if (_validator.CanAppend(_path, c, GetGridSnapshot()))
+            if (_validator.CanAppend(_path, c, coord => _model.Get(coord)))
             {
                 _path.Add(c);
                 _chipViews[c.Row, c.Col]?.SetSelected(true);
