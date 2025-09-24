@@ -6,7 +6,7 @@ using LinkMatch.Core.Signals;
 
 namespace LinkMatch.Game.UI
 {
-    public sealed class GameOverPanel : MonoBehaviour
+    public sealed class LevelEndPanel : MonoBehaviour
     {
         [SerializeField] private GameObject root;
         [SerializeField] private TMP_Text title;
