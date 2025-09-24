@@ -1,9 +1,10 @@
+using LinkMatch.Core.Pooling;
 using UnityEngine;
 
 namespace LinkMatch.Game.Chips
 {
     [RequireComponent(typeof(SpriteRenderer))]
-    public class Chip : MonoBehaviour
+    public class Chip : MonoBehaviour, IPoolable
     {
         [field: SerializeField] public ChipType Type { get; private set; }
 
@@ -32,6 +33,19 @@ namespace LinkMatch.Game.Chips
             Type = type;
             if (_sr == null) _sr = GetComponent<SpriteRenderer>();
             _sr.sprite = sprite;
+        }
+
+        public void OnSpawned()
+        {
+            SetSelected(false);
+            transform.localScale = Vector3.one;
+        }
+
+        public void OnDespawned()
+        {
+            SetSelected(false);
+            transform.rotation = Quaternion.identity;
+            transform.localScale = Vector3.one;
         }
     }
 }

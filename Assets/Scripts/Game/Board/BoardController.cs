@@ -37,7 +37,7 @@ namespace LinkMatch.Game.Board
         private ILinkPathValidator _validator;
         private readonly List<Coord> _path = new();
         private IFillStrategy _fill;
-        private ChipFactory _chipFactory;
+        private IChipFactory _chipFactory;
         private System.Random _rng;
         private bool _busy;
         private IShuffleStrategy _shuffle;
@@ -50,7 +50,10 @@ namespace LinkMatch.Game.Board
             _chipViews = new Chip[levelConfig.rows, levelConfig.cols];
             _validator = new LinkPathValidator(minLength: 3);
             _rng = new System.Random();
-            _chipFactory = new ChipFactory(chipPrefab, chipPalette);
+
+            int cap = levelConfig.rows * levelConfig.cols;
+            _chipFactory = new ChipFactory(chipPrefab.GetComponent<Chip>(), boardRoot, chipPalette, prewarm: cap, maxSize: cap * 2);
+            
             _fill = new GravityFillStrategy();
             _shuffle = new SimpleShuffleStrategy();
 
@@ -293,9 +296,9 @@ namespace LinkMatch.Game.Board
             return (ChipType)v;
         }
 
-        private Chip SpawnChip(ChipType t, Vector3 worldPos)
+        private Chip SpawnChip(ChipType t, Vector3 pos)
         {
-            return _chipFactory.Create(boardRoot, worldPos, t);
+            return _chipFactory.Create(pos, t);
         }
 
         private IEnumerator PopAndDestroy(System.Collections.Generic.List<Coord> coords)
@@ -321,7 +324,7 @@ namespace LinkMatch.Game.Board
                     yield return null;
                 }
 
-                Destroy(chip.gameObject);
+                _chipFactory.Despawn(chip);
             }
         }
         
