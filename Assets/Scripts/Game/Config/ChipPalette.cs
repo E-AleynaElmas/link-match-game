@@ -1,18 +1,53 @@
-
-using LinkMatch.Game.Chips;
+using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "LinkMatch/ChipPalette", fileName = "ChipPalette")]
-public class ChipPalette : ScriptableObject 
+namespace LinkMatch.Game.Chips
 {
-    public Sprite yellow; public Sprite blue; public Sprite green; public Sprite red;
-    public Color selectionTint = new Color(1f,1f,1f,0.2f);
-    public Sprite GetSprite(ChipType t) => t switch
+    [CreateAssetMenu(menuName = "AgaveLink/ChipPalette", fileName = "ChipPalette")]
+    public class ChipPalette : ScriptableObject
     {
-        ChipType.Yellow => yellow,
-        ChipType.Blue => blue,
-        ChipType.Green => green,
-        ChipType.Red => red,
-        _ => null
-    };
+        [SerializeField] private ChipPaletteItem[] items;
+
+        private Dictionary<ChipType, ChipPaletteItem> _itemLookup;
+
+        private void OnEnable()
+        {
+            BuildLookupTable();
+        }
+
+        private void BuildLookupTable()
+        {
+            if (items == null) return;
+
+            _itemLookup = new Dictionary<ChipType, ChipPaletteItem>(items.Length);
+            foreach (var item in items)
+            {
+                _itemLookup[item.type] = item;
+            }
+        }
+
+        public Sprite GetSprite(ChipType type)
+        {
+            EnsureLookupTable();
+            return _itemLookup.TryGetValue(type, out var item) ? item.sprite : null;
+        }
+
+        public Color GetColor(ChipType type)
+        {
+            EnsureLookupTable();
+            return _itemLookup.TryGetValue(type, out var item) ? item.color : Color.white;
+        }
+
+        public ChipPaletteItem? GetItem(ChipType type)
+        {
+            EnsureLookupTable();
+            return _itemLookup.TryGetValue(type, out var item) ? item : null;
+        }
+
+        private void EnsureLookupTable()
+        {
+            if (_itemLookup == null)
+                BuildLookupTable();
+        }
+    }
 }

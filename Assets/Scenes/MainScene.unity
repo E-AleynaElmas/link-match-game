@@ -533,11 +533,11 @@ MonoBehaviour:
   chipPalette: {fileID: 11400000, guid: e23e3a7fa42d246839d7e971b439645a, type: 2}
   tilePrefab: {fileID: 6544594576440211307, guid: 74f9344921fd3474db91b2e4c54e9dfc, type: 3}
   chipPrefab: {fileID: 8594360093452898011, guid: e1e27063938084255ad744caba1c836a, type: 3}
+  linePrefab: {fileID: 6381918302432046416, guid: 04e6eb2cd354046c2b2d1c13bce01ed3, type: 3}
   boardRoot: {fileID: 1986110782}
   inputService: {fileID: 930881566}
-  cellSize: 1
+  gameCamera: {fileID: 963194227}
   fallDuration: 0.08
-  popDuration: 0.06
   shuffleMaxRetries: 50
   initialMovesOverride: -1
 --- !u!1 &2044866060

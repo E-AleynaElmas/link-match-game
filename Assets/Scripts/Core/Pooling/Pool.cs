@@ -37,9 +37,14 @@ namespace LinkMatch.Core.Pooling
 
         public void Prewarm(int count)
         {
+            if (count <= 0) return;
+
             var tmp = new List<T>(count);
-            for (int i = 0; i < count; i++) tmp.Add(Get());
-            foreach (var t in tmp) Return(t);
+            for (int i = 0; i < count; i++)
+                tmp.Add(Get());
+
+            for (int i = 0; i < tmp.Count; i++)
+                Return(tmp[i]);
         }
 
         public void Clear() => _stack.Clear();

@@ -10,14 +10,15 @@ namespace LinkMatch.Game.Inputs
         public event Action<Vector3> ReleasedWorld;
 
         [Header("References")]
-        [SerializeField] private Camera cam; // boşsa Awake'te Camera.main'e düşer
+        [SerializeField] private Camera cam;
 
         private bool _isDown;
         private int _activeTouchId = -1;
 
         private void Awake()
         {
-            if (cam == null) cam = Camera.main;
+            if (cam == null)
+                cam = Camera.main;
         }
 
         private void Update()
@@ -97,10 +98,15 @@ namespace LinkMatch.Game.Inputs
 
         private Vector3 ScreenToWorld(Vector3 screenPos)
         {
-            if (cam == null) cam = Camera.main;
-            var w = cam.ScreenToWorldPoint(screenPos);
-            w.z = 0f;
-            return w;
+            if (cam == null)
+            {
+                Debug.LogWarning("Camera reference is null in UnityInputService");
+                return screenPos;
+            }
+
+            var worldPos = cam.ScreenToWorldPoint(screenPos);
+            worldPos.z = 0f;
+            return worldPos;
         }
 
 #if UNITY_EDITOR

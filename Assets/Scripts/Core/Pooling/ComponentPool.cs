@@ -22,9 +22,14 @@ namespace LinkMatch.Core.Pooling
         public T Get()
         {
             T item = _stack.Count > 0 ? _stack.Pop() : Object.Instantiate(_prefab, _parent);
+
+            if (item is IPoolable poolable)
+                poolable.OnSpawned();
+
             var go = item.gameObject;
-            if (!go.activeSelf) go.SetActive(true);
-            if (item is IPoolable p) p.OnSpawned();
+            if (!go.activeSelf)
+                go.SetActive(true);
+
             return item;
         }
 
@@ -43,9 +48,14 @@ namespace LinkMatch.Core.Pooling
 
         public void Prewarm(int count)
         {
+            if (count <= 0) return;
+
             var tmp = new List<T>(count);
-            for (int i = 0; i < count; i++) tmp.Add(Get());
-            foreach (var t in tmp) Return(t);
+            for (int i = 0; i < count; i++)
+                tmp.Add(Get());
+
+            for (int i = 0; i < tmp.Count; i++)
+                Return(tmp[i]);
         }
 
         public void Clear()

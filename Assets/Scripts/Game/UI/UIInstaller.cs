@@ -10,13 +10,16 @@ namespace LinkMatch.Game.UI
 
         private void Awake()
         {
-            if (!canvas)
-                canvas = FindFirstObjectByType<Canvas>();
+            if (canvas == null)
+            {
+                Debug.LogError("Canvas reference is missing in UIInstaller! Please assign it in the inspector.");
+                return;
+            }
 
-            if (hudPrefab)
+            if (hudPrefab != null)
                 Instantiate(hudPrefab, canvas.transform, false);
 
-            if (gameOverPrefab)
+            if (gameOverPrefab != null)
                 Instantiate(gameOverPrefab, canvas.transform, false);
         }
     }

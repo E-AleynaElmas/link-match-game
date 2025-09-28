@@ -7,6 +7,7 @@ namespace LinkMatch.Game.Chips
     public class Chip : MonoBehaviour, IPoolable
     {
         [field: SerializeField] public ChipType Type { get; private set; }
+        [SerializeField] private float scaleOnSelect = 1.1f;
 
         private SpriteRenderer _sr;
         private Vector3 _baseScale;
@@ -25,13 +26,12 @@ namespace LinkMatch.Game.Chips
         public void SetSelected(bool on)
         {
             // Basit görsel feedback: scale büyüt/küçült
-            transform.localScale = on ? _baseScale * 1.1f : _baseScale;
+            transform.localScale = on ? _baseScale * scaleOnSelect : _baseScale;
         }
 
         public void SetType(ChipType type, Sprite sprite)
         {
             Type = type;
-            if (_sr == null) _sr = GetComponent<SpriteRenderer>();
             _sr.sprite = sprite;
         }
 
