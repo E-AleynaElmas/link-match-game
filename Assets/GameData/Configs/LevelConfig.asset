@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   rows: 8
   cols: 8
-  initialMoves: 20
-  targetScore: 20
+  initialMoves: 15
+  targetScore: 50
   useFixedSeed: 0
   seed: 12345
   enabledTypes: 01000000020000000300000004000000

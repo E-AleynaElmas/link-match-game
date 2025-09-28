@@ -623,7 +623,7 @@ MonoBehaviour:
   boardRoot: {fileID: 1986110782}
   inputService: {fileID: 930881566}
   gameCamera: {fileID: 963194227}
-  fallDuration: 0.08
+  fallDuration: 0.04
   shuffleMaxRetries: 50
   initialMovesOverride: -1
 --- !u!1 &2044866060

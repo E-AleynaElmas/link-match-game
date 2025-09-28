@@ -8,6 +8,10 @@ namespace LinkMatch.Game.Board
 {
     public sealed class BoardAnimationController
     {
+        private const float POP_SCALE_MULTIPLIER = 1.15f;
+        private const float DEFAULT_PULSE_SCALE = 1.05f;
+        private const float NORMAL_SCALE = 1f;
+
         private readonly float _popDuration;
         private readonly float _pulseDuration;
         private readonly IChipFactory _chipFactory;
@@ -32,7 +36,7 @@ namespace LinkMatch.Game.Board
             }
         }
 
-        public IEnumerator PulseAllChips(Chip[,] chipViews, float scale = 1.05f)
+        public IEnumerator PulseAllChips(Chip[,] chipViews, float scale = DEFAULT_PULSE_SCALE)
         {
             var activeChips = GatherActiveChips(chipViews);
             yield return PulseChips(activeChips, scale, _pulseDuration);
@@ -41,7 +45,7 @@ namespace LinkMatch.Game.Board
         private IEnumerator StartPopAnimation(Chip chip)
         {
             var originalScale = chip.transform.localScale;
-            var targetScale = originalScale * 1.15f;
+            var targetScale = originalScale * POP_SCALE_MULTIPLIER;
 
             float elapsed = 0f;
             while (elapsed < _popDuration)
@@ -55,8 +59,8 @@ namespace LinkMatch.Game.Board
 
         private IEnumerator PulseChips(List<Transform> chips, float scale, float duration)
         {
-            yield return ScaleChips(chips, 1f, scale, duration);
-            yield return ScaleChips(chips, scale, 1f, duration);
+            yield return ScaleChips(chips, NORMAL_SCALE, scale, duration);
+            yield return ScaleChips(chips, scale, NORMAL_SCALE, duration);
         }
 
         private IEnumerator ScaleChips(List<Transform> chips, float fromScale, float toScale, float duration)

@@ -25,6 +25,16 @@ namespace LinkMatch.Game.Board
     }
     public sealed class BoardController : MonoBehaviour
     {
+        private const int MINIMUM_LINK_LENGTH = 3;
+        private const int POOL_SIZE_MULTIPLIER = 2;
+        private const float DEFAULT_POP_DURATION = 0.06f;
+        private const float DEFAULT_PULSE_DURATION = 0.08f;
+        private const float DEFAULT_CELL_SIZE = 1f;
+        private const int CHIP_TYPE_MIN = 1;
+        private const int CHIP_TYPE_MAX = 5;
+        private const float DEFAULT_PULSE_SCALE = 1.05f;
+        private const float HALF_MULTIPLIER = 0.5f;
+
         [Header("Configuration")]
         [SerializeField] private LevelConfig levelConfig;
         [SerializeField] private ChipPalette chipPalette;
@@ -65,7 +75,7 @@ namespace LinkMatch.Game.Board
 
             var gameState = new GameStateManager(levelConfig, initialMovesOverride);
 
-            var validator = new LinkPathValidator(minLength: 3);
+            var validator = new LinkPathValidator(minLength: MINIMUM_LINK_LENGTH);
             var fillStrategy = new GravityFillStrategy();
             var shuffleStrategy = new SimpleShuffleStrategy();
 
@@ -76,14 +86,14 @@ namespace LinkMatch.Game.Board
                 boardRoot,
                 chipPalette,
                 prewarm: boardCapacity,
-                maxSize: boardCapacity * 2);
+                maxSize: boardCapacity * POOL_SIZE_MULTIPLIER);
 
             var lineRenderer = Instantiate(linePrefab, boardRoot);
             var linkLineRenderer = new LinkLineRenderer(lineRenderer, chipPalette);
 
             var animationController = new BoardAnimationController(
-                popDuration: 0.06f,
-                pulseDuration: 0.08f,
+                popDuration: DEFAULT_POP_DURATION,
+                pulseDuration: DEFAULT_PULSE_DURATION,
                 chipFactory);
 
             var cellSize = CalculateCellSize();
@@ -115,7 +125,7 @@ namespace LinkMatch.Game.Board
                 if (worldWidth > 0f)
                     return worldWidth;
             }
-            return 1f;
+            return DEFAULT_CELL_SIZE;
         }
 
         private void BuildTiles(BoardModel model, float cellSize)
@@ -139,7 +149,7 @@ namespace LinkMatch.Game.Board
                 for (int c = 0; c < model.Cols; c++)
                 {
                     var coord = new Coord(r, c);
-                    var type = (ChipType)rng.Next(1, 5);
+                    var type = (ChipType)rng.Next(CHIP_TYPE_MIN, CHIP_TYPE_MAX);
                     model.Set(coord, type);
 
                     var pos = ToWorldPos(r, c, model.Rows, model.Cols, cellSize);
@@ -161,8 +171,8 @@ namespace LinkMatch.Game.Board
             float width = totalCols * cellSize;
             float height = totalRows * cellSize;
 
-            float originX = -width * 0.5f + (cellSize * 0.5f);
-            float originY = -height * 0.5f + (cellSize * 0.5f);
+            float originX = -width * HALF_MULTIPLIER + (cellSize * HALF_MULTIPLIER);
+            float originY = -height * HALF_MULTIPLIER + (cellSize * HALF_MULTIPLIER);
 
             return new Vector3(originX + col * cellSize, originY + row * cellSize, 0f);
         }
@@ -305,8 +315,8 @@ namespace LinkMatch.Game.Board
             float width = levelConfig.cols * _components.CellSize;
             float height = levelConfig.rows * _components.CellSize;
 
-            float originX = -width * 0.5f + (_components.CellSize * 0.5f);
-            float originY = -height * 0.5f + (_components.CellSize * 0.5f);
+            float originX = -width * HALF_MULTIPLIER + (_components.CellSize * HALF_MULTIPLIER);
+            float originY = -height * HALF_MULTIPLIER + (_components.CellSize * HALF_MULTIPLIER);
 
             return new Vector3(originX + col * _components.CellSize, originY + row * _components.CellSize, 0f);
         }
@@ -352,7 +362,7 @@ namespace LinkMatch.Game.Board
 
         private ChipType NextRandomType()
         {
-            return (ChipType)_components.RandomGenerator.Next(1, 5);
+            return (ChipType)_components.RandomGenerator.Next(CHIP_TYPE_MIN, CHIP_TYPE_MAX);
         }
 
         private Chip SpawnChip(ChipType type, Vector3 position)
@@ -371,7 +381,7 @@ namespace LinkMatch.Game.Board
                 _components.ShuffleStrategy.Shuffle(_components.Model, _components.RandomGenerator);
 
                 UpdateChipVisuals();
-                yield return _components.AnimationController.PulseAllChips(_components.ChipViews, 1.05f);
+                yield return _components.AnimationController.PulseAllChips(_components.ChipViews, DEFAULT_PULSE_SCALE);
 
             } while (!_components.ShuffleStrategy.HasAnyMove(_components.Model) && retries < shuffleMaxRetries);
 

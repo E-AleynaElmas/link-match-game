@@ -99,3 +99,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   <Type>k__BackingField: 0
   scaleOnSelect: 1.05
+  highlightColor: {r: 0.9056604, g: 0.9056604, b: 0.9056604, a: 1}

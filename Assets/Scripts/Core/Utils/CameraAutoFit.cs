@@ -5,6 +5,12 @@ namespace LinkMatch.Core.Utils
     [RequireComponent(typeof(Camera))]
     public class CameraAutoFit : MonoBehaviour
     {
+        private const float CAMERA_Z_POSITION = -10f;
+        private const float PADDING_MULTIPLIER = 2f;
+        private const float HALF_MULTIPLIER = 0.5f;
+        private const float BACKGROUND_Z_POSITION = 10f;
+        private const int BACKGROUND_SORTING_ORDER = -100;
+
         [SerializeField] private float paddingWorld = 0.25f; // kenarlardan pay
         [SerializeField] private float minSize = 3f;         // çok küçük gridlerde okunabilirlik için
 
@@ -18,18 +24,18 @@ namespace LinkMatch.Core.Utils
         {
             _cam = GetComponent<Camera>();
             _cam.orthographic = true;
-            transform.position = new Vector3(0f, 0f, -10f); // dünya merkezini göster
+            transform.position = new Vector3(0f, 0f, CAMERA_Z_POSITION); // dünya merkezini göster
         }
 
         public void Fit(int rows, int cols, float cellSize)
         {
             // Gridin toplam genişlik/yüksekliği + padding
-            float width  = cols * cellSize + 2f * paddingWorld;
-            float height = rows * cellSize + 2f * paddingWorld;
+            float width  = cols * cellSize + PADDING_MULTIPLIER * paddingWorld;
+            float height = rows * cellSize + PADDING_MULTIPLIER * paddingWorld;
 
             float aspect = (float)Screen.width / Screen.height;
-            float sizeByHeight = height * 0.5f;
-            float sizeByWidth  = (width * 0.5f) / aspect;
+            float sizeByHeight = height * HALF_MULTIPLIER;
+            float sizeByWidth  = (width * HALF_MULTIPLIER) / aspect;
 
             _cam.orthographicSize = Mathf.Max(minSize, sizeByHeight, sizeByWidth);
 
@@ -46,7 +52,7 @@ namespace LinkMatch.Core.Utils
         private void FitBackground(int rows, int cols, float cellSize)
         {
             // Kamera'nın görüş alanını hesapla (viewport size)
-            float cameraHeight = _cam.orthographicSize * 2f;
+            float cameraHeight = _cam.orthographicSize * PADDING_MULTIPLIER;
             float cameraWidth = cameraHeight * _cam.aspect;
 
             // Extra padding ekle (daha büyük alan kapla)
@@ -69,11 +75,11 @@ namespace LinkMatch.Core.Utils
             backgroundSprite.transform.localScale = Vector3.one * scale;
 
             // Position'ı ayarla (center'da, grid'den geride)
-            backgroundSprite.transform.position = new Vector3(0f, 0f, 10f);
+            backgroundSprite.transform.position = new Vector3(0f, 0f, BACKGROUND_Z_POSITION);
 
             // Sorting order'ı ayarla (en arkada)
             backgroundSprite.sortingLayerName = "Background";
-            backgroundSprite.sortingOrder = -100;
+            backgroundSprite.sortingOrder = BACKGROUND_SORTING_ORDER;
         }
 
         // Background'ı manuel olarak yeniden fit etmek için
