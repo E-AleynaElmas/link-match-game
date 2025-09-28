@@ -134,22 +134,28 @@ namespace LinkMatch.Game.Board
 
         private void BuildTiles(BoardModel model, float cellSize)
         {
-            for (int r = 0; r < model.Rows; r++)
+            var tileGO = new GameObject("TileBackground");
+            tileGO.transform.SetParent(boardRoot);
+
+            var spriteRenderer = tileGO.AddComponent<SpriteRenderer>();
+
+            // Get sprite from tile prefab
+            if (tilePrefab.TryGetComponent<SpriteRenderer>(out var tileSR))
             {
-                for (int c = 0; c < model.Cols; c++)
-                {
-                    var pos = ToWorldPos(r, c, model.Rows, model.Cols, cellSize);
-                    var tileGO = Instantiate(tilePrefab, pos, Quaternion.identity, boardRoot);
-                    tileGO.name = $"Tile({r},{c})";
-
-                    // Remove unnecessary components for performance
-                    if (tileGO.TryGetComponent<Collider2D>(out var collider))
-                        DestroyImmediate(collider);
-
-                    if (tileGO.TryGetComponent<MonoBehaviour>(out var script))
-                        DestroyImmediate(script);
-                }
+                spriteRenderer.sprite = tileSR.sprite;
+                spriteRenderer.color = tileSR.color;
             }
+
+            spriteRenderer.sortingOrder = -1; // Behind chips
+            spriteRenderer.drawMode = SpriteDrawMode.Tiled;
+
+            // Calculate total board size
+            float width = model.Cols * cellSize;
+            float height = model.Rows * cellSize;
+            spriteRenderer.size = new Vector2(width, height);
+
+            // Center the tilemap
+            tileGO.transform.position = Vector3.zero;
         }
 
         private void SpawnInitialChips(BoardModel model, GameObject[,] chipViews, IChipFactory chipFactory, System.Random rng, float cellSize)
