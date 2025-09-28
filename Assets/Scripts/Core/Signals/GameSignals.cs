@@ -10,6 +10,9 @@ namespace LinkMatch.Core.Signals
         public static event Action<int> OnMovesChanged;
         public static void MovesChanged(int v) => OnMovesChanged?.Invoke(v);
 
+        public static event Action<int> OnTargetScoreChanged;
+        public static void TargetScoreChanged(int v) => OnTargetScoreChanged?.Invoke(v);
+
         public static event Action<bool> OnBoardBusy;
         public static void BoardBusy(bool v) => OnBoardBusy?.Invoke(v);
 

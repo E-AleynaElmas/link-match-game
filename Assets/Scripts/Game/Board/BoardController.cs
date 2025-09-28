@@ -42,7 +42,8 @@ namespace LinkMatch.Game.Board
 
         private BoardComponents _components;
         private readonly List<Coord> _currentPath = new();
-        private bool _isBusy; 
+        private bool _isBusy;
+        private bool _isGameOver; 
 
         private void Start()
         {
@@ -174,6 +175,7 @@ namespace LinkMatch.Game.Board
 
         private void NotifyInitialState()
         {
+            _isGameOver = false; // Reset game over state
             _components.GameState.Reset(initialMovesOverride);
             GameSignals.BoardBusy(false);
         }
@@ -190,6 +192,8 @@ namespace LinkMatch.Game.Board
             {
                 Debug.LogError("InputService reference is missing in BoardController! Please assign it in the inspector.");
             }
+
+            GameSignals.OnGameOver += OnGameOver;
         }
 
         private void OnDisable()
@@ -200,11 +204,22 @@ namespace LinkMatch.Game.Board
                 inputService.DraggedWorld -= OnDragged;
                 inputService.ReleasedWorld -= OnReleased;
             }
+
+            GameSignals.OnGameOver -= OnGameOver;
+        }
+
+        private void OnGameOver(bool hasWon)
+        {
+            _isGameOver = true;
+            _isBusy = true; // Block all further interactions
+            ClearSelection();
+            _currentPath.Clear();
+            _components.LinkLineRenderer.ClearLine();
         }
 
         private void OnPressed(Vector3 worldPos)
         {
-            if (_isBusy) return;
+            if (_isBusy || _isGameOver) return;
 
             if (!TryWorldToCoord(worldPos, out var coord)) return;
 
@@ -223,7 +238,7 @@ namespace LinkMatch.Game.Board
 
         private void OnDragged(Vector3 world)
         {
-            if (_isBusy || _currentPath.Count == 0) return;
+            if (_isBusy || _isGameOver || _currentPath.Count == 0) return;
             if (!TryWorldToCoord(world, out var coord)) return;
 
             // Backtrack handling
@@ -255,7 +270,7 @@ namespace LinkMatch.Game.Board
 
         private void OnReleased(Vector3 world)
         {
-            if (_isBusy || _currentPath.Count == 0) return;
+            if (_isBusy || _isGameOver || _currentPath.Count == 0) return;
 
             _components.LinkLineRenderer.ClearLine();
             bool isValidPath = _components.Validator.IsValidOnRelease(_currentPath);
@@ -320,19 +335,15 @@ namespace LinkMatch.Game.Board
             _currentPath.Clear();
 
             bool canContinue = _components.GameState.TryConsumeMove(removedCount);
-            if (!canContinue)
-            {
-                _isBusy = false;
-                GameSignals.BoardBusy(false);
-                yield break;
-            }
 
+            // Fill işlemini game over olsa bile tamamla (visual completeness için)
             yield return _components.FillStrategy.Fill(
                 _components.Model, _components.ChipViews,
                 ToWorld, NextRandomType, SpawnChip, fallDuration
             );
 
-            if (!_components.ShuffleStrategy.HasAnyMove(_components.Model))
+            // Game over olduysa shuffle yapmaya gerek yok, input zaten bloklu
+            if (canContinue && !_components.ShuffleStrategy.HasAnyMove(_components.Model))
                 yield return ShuffleRoutine();
 
             _isBusy = false;
@@ -392,6 +403,7 @@ namespace LinkMatch.Game.Board
 
         public int Score => _score;
         public int MovesLeft => _movesLeft;
+        public int TargetScore => _config.targetScore;
         public bool IsGameOver => _movesLeft <= 0 || _score >= _config.targetScore;
         public bool HasWon => _score >= _config.targetScore;
 
@@ -407,6 +419,7 @@ namespace LinkMatch.Game.Board
             _movesLeft = (initialMovesOverride > 0) ? initialMovesOverride : _config.initialMoves;
             _score = 0;
             NotifyStateChanged();
+            GameSignals.TargetScoreChanged(_config.targetScore);
         }
 
         public bool TryConsumeMove(int pointsGained)
