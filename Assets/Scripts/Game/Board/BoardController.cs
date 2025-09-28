@@ -28,7 +28,6 @@ namespace LinkMatch.Game.Board
     public sealed class BoardController : MonoBehaviour
     {
         private const int MINIMUM_LINK_LENGTH = 3;
-        private const int POOL_SIZE_MULTIPLIER = 2;
         private const float DEFAULT_POP_DURATION = 0.06f;
         private const float DEFAULT_PULSE_DURATION = 0.08f;
         private const float DEFAULT_CELL_SIZE = 1f;
@@ -41,7 +40,6 @@ namespace LinkMatch.Game.Board
         [SerializeField] private LevelConfig levelConfig;
         [SerializeField] private ChipPalette chipPalette;
         [SerializeField] private GameObject tilePrefab;
-        [SerializeField] private GameObject chipPrefab;
         [SerializeField] private LineRenderer linePrefab;
         [SerializeField] private Transform boardRoot;
         [SerializeField] private UnityInputService inputService;
