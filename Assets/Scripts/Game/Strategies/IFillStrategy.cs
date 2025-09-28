@@ -10,10 +10,10 @@ namespace LinkMatch.Game.Strategies
     {
         UniTask Fill(
             BoardModel model,
-            Chip[,] chipViews,
+            GameObject[,] chipViews,
             System.Func<int,int,Vector3> toWorld,
             System.Func<ChipType> nextRandomType,
-            System.Func<ChipType, Vector3, Chip> spawnChip,
+            System.Func<ChipType, Vector3, GameObject> spawnChip,
             float fallDuration,
             CancellationToken cancellationToken = default
         );

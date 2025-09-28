@@ -11,10 +11,10 @@ namespace LinkMatch.Game.Strategies
     {
         public async UniTask Fill(
             BoardModel m,
-            Chip[,] views,
+            GameObject[,] views,
             System.Func<int,int,Vector3> ToWorld,
             System.Func<ChipType> NextType,
-            System.Func<ChipType, Vector3, Chip> Spawn,
+            System.Func<ChipType, Vector3, GameObject> Spawn,
             float fallDur,
             CancellationToken cancellationToken = default)
         {
@@ -37,12 +37,12 @@ namespace LinkMatch.Game.Strategies
                         m.Set(new Coord(writeRow, c), t);
                         m.Set(new Coord(r, c), ChipType.None);
 
-                        // View’de diziyi güncelle
-                        var chip = views[r, c];
-                        views[writeRow, c] = chip;
+                        // View'de diziyi güncelle
+                        var chipGO = views[r, c];
+                        views[writeRow, c] = chipGO;
                         views[r, c] = null;
 
-                        await MoveTo(chip.transform, ToWorld(writeRow, c), fallDur, cancellationToken);
+                        await MoveTo(chipGO.transform, ToWorld(writeRow, c), fallDur, cancellationToken);
                     }
                     writeRow++;
                 }
@@ -55,10 +55,10 @@ namespace LinkMatch.Game.Strategies
 
                     Vector3 target = ToWorld(r, c);
                     Vector3 spawn = target + Vector3.up * (rows * 0.5f);
-                    var chip = Spawn(t, spawn);
-                    views[r, c] = chip;
+                    var chipGO = Spawn(t, spawn);
+                    views[r, c] = chipGO;
 
-                    await MoveTo(chip.transform, target, fallDur, cancellationToken);
+                    await MoveTo(chipGO.transform, target, fallDur, cancellationToken);
                 }
             }
         }

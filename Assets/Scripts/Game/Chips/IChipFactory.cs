@@ -4,7 +4,7 @@ namespace LinkMatch.Game.Chips
 {
     public interface IChipFactory
     {
-        Chip Create(Vector3 worldPos, ChipType type);
-        void Despawn(Chip chip);
+        GameObject Create(Vector3 worldPos, ChipType type);
+        void Despawn(GameObject chipGO);
     }
 }

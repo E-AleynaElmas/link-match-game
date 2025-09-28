@@ -13,7 +13,8 @@ namespace LinkMatch.Game.Board
     public sealed class BoardComponents
     {
         public BoardModel Model { get; set; }
-        public Chip[,] ChipViews { get; set; }
+        public GameObject[,] ChipViews { get; set; }
+        public ChipManager ChipManager { get; set; }
         public GameStateManager GameState { get; set; }
         public ILinkPathValidator Validator { get; set; }
         public IFillStrategy FillStrategy { get; set; }
@@ -71,7 +72,7 @@ namespace LinkMatch.Game.Board
         private BoardComponents InitializeBoardComponents()
         {
             var model = new BoardModel(levelConfig.rows, levelConfig.cols);
-            var chipViews = new Chip[levelConfig.rows, levelConfig.cols];
+            var chipViews = new GameObject[levelConfig.rows, levelConfig.cols];
             var rng = new System.Random();
 
             var gameState = new GameStateManager(levelConfig, initialMovesOverride);
@@ -81,13 +82,14 @@ namespace LinkMatch.Game.Board
             var shuffleStrategy = new SimpleShuffleStrategy();
 
             int boardCapacity = levelConfig.rows * levelConfig.cols;
-            var chipComponent = chipPrefab.GetComponent<Chip>();
+            var chipManager = new GameObject("ChipManager").AddComponent<ChipManager>();
+            chipManager.transform.SetParent(boardRoot);
+
             var chipFactory = new ChipFactory(
-                chipComponent,
+                chipManager,
                 boardRoot,
                 chipPalette,
-                prewarm: boardCapacity,
-                maxSize: boardCapacity * POOL_SIZE_MULTIPLIER);
+                prewarm: boardCapacity);
 
             var lineRenderer = Instantiate(linePrefab, boardRoot);
             var linkLineRenderer = new LinkLineRenderer(lineRenderer, chipPalette);
@@ -106,6 +108,7 @@ namespace LinkMatch.Game.Board
             {
                 Model = model,
                 ChipViews = chipViews,
+                ChipManager = chipManager,
                 GameState = gameState,
                 Validator = validator,
                 FillStrategy = fillStrategy,
@@ -143,7 +146,7 @@ namespace LinkMatch.Game.Board
             }
         }
 
-        private void SpawnInitialChips(BoardModel model, Chip[,] chipViews, IChipFactory chipFactory, System.Random rng, float cellSize)
+        private void SpawnInitialChips(BoardModel model, GameObject[,] chipViews, IChipFactory chipFactory, System.Random rng, float cellSize)
         {
             for (int r = 0; r < model.Rows; r++)
             {
@@ -203,10 +206,10 @@ namespace LinkMatch.Game.Board
             {
                 for (int c = 0; c < _components.Model.Cols; c++)
                 {
-                    var chip = _components.ChipViews[r, c];
-                    if (chip != null)
+                    var chipGO = _components.ChipViews[r, c];
+                    if (chipGO != null)
                     {
-                        _components.ChipFactory.Despawn(chip);
+                        _components.ChipFactory.Despawn(chipGO);
                         _components.ChipViews[r, c] = null;
                     }
                 }
@@ -277,9 +280,9 @@ namespace LinkMatch.Game.Board
             ClearSelection();
             _currentPath.Clear();
             _currentPath.Add(coord);
-            var chip = _components.ChipViews[coord.Row, coord.Col];
-            if (chip != null)
-                chip.SetSelected(true);
+            var chipGO = _components.ChipViews[coord.Row, coord.Col];
+            if (chipGO != null)
+                _components.ChipManager.SetChipSelected(chipGO, true);
 
             _components.LinkLineRenderer.UpdatePath(_currentPath, ToWorld, chipType);
         }
@@ -294,9 +297,9 @@ namespace LinkMatch.Game.Board
             {
                 var removed = _currentPath[^1];
                 _currentPath.RemoveAt(_currentPath.Count - 1);
-                var chip = _components.ChipViews[removed.Row, removed.Col];
-                if (chip != null)
-                    chip.SetSelected(false);
+                var chipGO = _components.ChipViews[removed.Row, removed.Col];
+                if (chipGO != null)
+                    _components.ChipManager.SetChipSelected(chipGO, false);
 
                 var pathType = _components.Model.Get(_currentPath[0]);
                 _components.LinkLineRenderer.UpdatePath(_currentPath, ToWorld, pathType);
@@ -307,9 +310,9 @@ namespace LinkMatch.Game.Board
             if (_components.Validator.CanAppend(_currentPath, coord, c => _components.Model.Get(c)))
             {
                 _currentPath.Add(coord);
-                var chip = _components.ChipViews[coord.Row, coord.Col];
-                if (chip != null)
-                    chip.SetSelected(true);
+                var chipGO = _components.ChipViews[coord.Row, coord.Col];
+                if (chipGO != null)
+                    _components.ChipManager.SetChipSelected(chipGO, true);
 
                 var pathType = _components.Model.Get(_currentPath[0]);
                 _components.LinkLineRenderer.UpdatePath(_currentPath, ToWorld, pathType);
@@ -361,12 +364,7 @@ namespace LinkMatch.Game.Board
 
         private void ClearSelection()
         {
-            foreach (var coord in _currentPath)
-            {
-                var chip = _components.ChipViews[coord.Row, coord.Col];
-                if (chip != null)
-                    chip.SetSelected(false);
-            }
+            _components.ChipManager.ClearAllSelections();
         }
 
         private async UniTask HandleValidPath(CancellationToken cancellationToken = default)
@@ -403,7 +401,7 @@ namespace LinkMatch.Game.Board
             return (ChipType)_components.RandomGenerator.Next(CHIP_TYPE_MIN, CHIP_TYPE_MAX);
         }
 
-        private Chip SpawnChip(ChipType type, Vector3 position)
+        private GameObject SpawnChip(ChipType type, Vector3 position)
         {
             return _components.ChipFactory.Create(position, type);
         }
@@ -432,12 +430,12 @@ namespace LinkMatch.Game.Board
             {
                 for (int c = 0; c < _components.Model.Cols; c++)
                 {
-                    var chip = _components.ChipViews[r, c];
-                    if (chip == null) continue;
+                    var chipGO = _components.ChipViews[r, c];
+                    if (chipGO == null) continue;
 
                     var chipType = _components.Model.Get(new Coord(r, c));
-                    chip.SetSelected(false);
-                    chip.SetType(chipType, chipPalette.GetSprite(chipType));
+                    _components.ChipManager.SetChipSelected(chipGO, false);
+                    _components.ChipManager.SetChipType(chipGO.GetInstanceID(), chipType, chipPalette.GetSprite(chipType));
                 }
             }
         }

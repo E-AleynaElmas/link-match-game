@@ -24,28 +24,28 @@ namespace LinkMatch.Game.Board
             _chipFactory = chipFactory;
         }
 
-        public async UniTask PopAndDestroyChips(IReadOnlyList<Coord> coords, Chip[,] chipViews, CancellationToken cancellationToken = default)
+        public async UniTask PopAndDestroyChips(IReadOnlyList<Coord> coords, GameObject[,] chipViews, CancellationToken cancellationToken = default)
         {
             foreach (var coord in coords)
             {
-                var chip = chipViews[coord.Row, coord.Col];
-                if (chip == null) continue;
+                var chipGO = chipViews[coord.Row, coord.Col];
+                if (chipGO == null) continue;
 
                 chipViews[coord.Row, coord.Col] = null;
-                await StartPopAnimation(chip, cancellationToken);
-                _chipFactory.Despawn(chip);
+                await StartPopAnimation(chipGO, cancellationToken);
+                _chipFactory.Despawn(chipGO);
             }
         }
 
-        public async UniTask PulseAllChips(Chip[,] chipViews, float scale = DEFAULT_PULSE_SCALE, CancellationToken cancellationToken = default)
+        public async UniTask PulseAllChips(GameObject[,] chipViews, float scale = DEFAULT_PULSE_SCALE, CancellationToken cancellationToken = default)
         {
             var activeChips = GatherActiveChips(chipViews);
             await PulseChips(activeChips, scale, _pulseDuration, cancellationToken);
         }
 
-        private async UniTask StartPopAnimation(Chip chip, CancellationToken cancellationToken = default)
+        private async UniTask StartPopAnimation(GameObject chipGO, CancellationToken cancellationToken = default)
         {
-            var originalScale = chip.transform.localScale;
+            var originalScale = chipGO.transform.localScale;
             var targetScale = originalScale * POP_SCALE_MULTIPLIER;
 
             float elapsed = 0f;
@@ -53,7 +53,7 @@ namespace LinkMatch.Game.Board
             {
                 elapsed += Time.deltaTime;
                 float progress = Mathf.Clamp01(elapsed / _popDuration);
-                chip.transform.localScale = Vector3.Lerp(originalScale, targetScale, progress);
+                chipGO.transform.localScale = Vector3.Lerp(originalScale, targetScale, progress);
                 await UniTask.Yield(cancellationToken);
             }
         }
@@ -86,7 +86,7 @@ namespace LinkMatch.Game.Board
             }
         }
 
-        private List<Transform> GatherActiveChips(Chip[,] chipViews)
+        private List<Transform> GatherActiveChips(GameObject[,] chipViews)
         {
             var activeChips = new List<Transform>();
             int rows = chipViews.GetLength(0);
@@ -96,9 +96,9 @@ namespace LinkMatch.Game.Board
             {
                 for (int c = 0; c < cols; c++)
                 {
-                    var chip = chipViews[r, c];
-                    if (chip != null)
-                        activeChips.Add(chip.transform);
+                    var chipGO = chipViews[r, c];
+                    if (chipGO != null)
+                        activeChips.Add(chipGO.transform);
                 }
             }
             return activeChips;
