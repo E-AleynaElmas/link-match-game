@@ -140,8 +140,14 @@ namespace LinkMatch.Game.Board
                 {
                     var pos = ToWorldPos(r, c, model.Rows, model.Cols, cellSize);
                     var tileGO = Instantiate(tilePrefab, pos, Quaternion.identity, boardRoot);
-                    if (tileGO.TryGetComponent<Tile>(out var tile))
-                        tile.Init(new Coord(r, c));
+                    tileGO.name = $"Tile({r},{c})";
+
+                    // Remove unnecessary components for performance
+                    if (tileGO.TryGetComponent<Collider2D>(out var collider))
+                        DestroyImmediate(collider);
+
+                    if (tileGO.TryGetComponent<MonoBehaviour>(out var script))
+                        DestroyImmediate(script);
                 }
             }
         }
@@ -338,15 +344,16 @@ namespace LinkMatch.Game.Board
 
         private bool TryWorldToCoord(Vector3 world, out Coord coord)
         {
-            var hit = Physics2D.OverlapPoint(world);
-            if (hit && hit.TryGetComponent<Tile>(out var tile))
-            {
-                coord = tile.Coord;
-                return true;
-            }
+            // Calculate grid position mathematically using ToWorld inverse
+            float width = levelConfig.cols * _components.CellSize;
+            float height = levelConfig.rows * _components.CellSize;
+            float originX = -width * 0.5f + _components.CellSize * 0.5f;
+            float originY = -height * 0.5f + _components.CellSize * 0.5f;
 
-            int col = Mathf.RoundToInt(world.x / _components.CellSize);
-            int row = Mathf.RoundToInt(world.y / _components.CellSize);
+            // Convert world position to grid coordinates
+            int col = Mathf.RoundToInt((world.x - originX) / _components.CellSize);
+            int row = Mathf.RoundToInt((world.y - originY) / _components.CellSize);
+
             coord = new Coord(row, col);
             return _components.Model.InBounds(coord);
         }
