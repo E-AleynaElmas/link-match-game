@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using UnityEngine.SceneManagement;
 using LinkMatch.Core.Signals;
 
 namespace LinkMatch.Game.UI
@@ -15,8 +14,13 @@ namespace LinkMatch.Game.UI
         private void Awake()
         {
             if (root) root.SetActive(false);
-            if (replayButton) replayButton.onClick.AddListener(() =>
-                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex));
+            if (replayButton) replayButton.onClick.AddListener(OnReplayClicked);
+        }
+
+        private void OnReplayClicked()
+        {
+            if (root) root.SetActive(false);
+            GameSignals.RequestGameReset();
         }
 
         private void OnEnable(){ GameSignals.OnGameOver += OnGameOver; }

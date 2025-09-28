@@ -3,17 +3,12 @@ using UnityEngine;
 
 namespace LinkMatch.Game.Chips
 {
-    [CreateAssetMenu(menuName = "AgaveLink/ChipPalette", fileName = "ChipPalette")]
+    [CreateAssetMenu(menuName = "LinkMatch/ChipPalette", fileName = "ChipPalette")]
     public class ChipPalette : ScriptableObject
     {
         [SerializeField] private ChipPaletteItem[] items;
 
         private Dictionary<ChipType, ChipPaletteItem> _itemLookup;
-
-        private void OnEnable()
-        {
-            BuildLookupTable();
-        }
 
         private void BuildLookupTable()
         {

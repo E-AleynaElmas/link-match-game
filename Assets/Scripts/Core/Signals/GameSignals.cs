@@ -18,5 +18,8 @@ namespace LinkMatch.Core.Signals
 
         public static event Action<bool> OnGameOver;
         public static void GameOver(bool win) => OnGameOver?.Invoke(win);
+
+        public static event Action OnGameResetRequested;
+        public static void RequestGameReset() => OnGameResetRequested?.Invoke();
     }
 }

@@ -184,6 +184,41 @@ namespace LinkMatch.Game.Board
                 ShuffleRoutine().Forget();
         }
 
+        public void ResetGame()
+        {
+            if (_components == null) return;
+
+            ClearSelection();
+            _isGameOver = false;
+            _components.GameState.Reset(initialMovesOverride);
+            RegenerateBoard();
+            EnsurePlayability();
+            GameSignals.BoardBusy(false);
+        }
+
+        private void RegenerateBoard()
+        {
+            // Clear existing chips
+            for (int r = 0; r < _components.Model.Rows; r++)
+            {
+                for (int c = 0; c < _components.Model.Cols; c++)
+                {
+                    var chip = _components.ChipViews[r, c];
+                    if (chip != null)
+                    {
+                        _components.ChipFactory.Despawn(chip);
+                        _components.ChipViews[r, c] = null;
+                    }
+                }
+            }
+
+            // Regenerate board content
+            _components.FillStrategy.Fill(
+                _components.Model, _components.ChipViews,
+                ToWorld, NextRandomType, SpawnChip, 0f
+            ).Forget();
+        }
+
         private void NotifyInitialState()
         {
             _isGameOver = false; // Reset game over state
@@ -205,6 +240,7 @@ namespace LinkMatch.Game.Board
             }
 
             GameSignals.OnGameOver += OnGameOver;
+            GameSignals.OnGameResetRequested += ResetGame;
         }
 
         private void OnDisable()
@@ -217,6 +253,7 @@ namespace LinkMatch.Game.Board
             }
 
             GameSignals.OnGameOver -= OnGameOver;
+            GameSignals.OnGameResetRequested -= ResetGame;
         }
 
         private void OnGameOver(bool hasWon)
