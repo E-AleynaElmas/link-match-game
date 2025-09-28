@@ -1,4 +1,5 @@
-using System.Collections;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using LinkMatch.Core.Utils;
 using LinkMatch.Game.Board;
 using LinkMatch.Game.Chips;
@@ -8,13 +9,14 @@ namespace LinkMatch.Game.Strategies
 {
     public sealed class GravityFillStrategy : IFillStrategy
     {
-        public IEnumerator Fill(
+        public async UniTask Fill(
             BoardModel m,
             Chip[,] views,
             System.Func<int,int,Vector3> ToWorld,
             System.Func<ChipType> NextType,
             System.Func<ChipType, Vector3, Chip> Spawn,
-            float fallDur)
+            float fallDur,
+            CancellationToken cancellationToken = default)
         {
             int rows = m.Rows, cols = m.Cols;
 
@@ -40,7 +42,7 @@ namespace LinkMatch.Game.Strategies
                         views[writeRow, c] = chip;
                         views[r, c] = null;
 
-                        yield return MoveTo(chip.transform, ToWorld(writeRow, c), fallDur);
+                        await MoveTo(chip.transform, ToWorld(writeRow, c), fallDur, cancellationToken);
                     }
                     writeRow++;
                 }
@@ -56,12 +58,12 @@ namespace LinkMatch.Game.Strategies
                     var chip = Spawn(t, spawn);
                     views[r, c] = chip;
 
-                    yield return MoveTo(chip.transform, target, fallDur);
+                    await MoveTo(chip.transform, target, fallDur, cancellationToken);
                 }
             }
         }
 
-        private static IEnumerator MoveTo(Transform tr, Vector3 to, float dur)
+        private static async UniTask MoveTo(Transform tr, Vector3 to, float dur, CancellationToken cancellationToken = default)
         {
             Vector3 from = tr.position;
             float t = 0f;
@@ -70,7 +72,7 @@ namespace LinkMatch.Game.Strategies
                 t += Time.deltaTime;
                 float k = Mathf.Clamp01(t / dur);
                 tr.position = Vector3.Lerp(from, to, k);
-                yield return null;
+                await UniTask.Yield(cancellationToken);
             }
             tr.position = to;
         }

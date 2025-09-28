@@ -1,5 +1,6 @@
-using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using LinkMatch.Core.Signals;
 using LinkMatch.Core.Utils;
 using LinkMatch.Game.Chips;
@@ -180,7 +181,7 @@ namespace LinkMatch.Game.Board
         private void EnsurePlayability()
         {
             if (!_components.ShuffleStrategy.HasAnyMove(_components.Model))
-                StartCoroutine(ShuffleRoutine());
+                ShuffleRoutine().Forget();
         }
 
         private void NotifyInitialState()
@@ -292,7 +293,7 @@ namespace LinkMatch.Game.Board
                 return;
             }
 
-            StartCoroutine(HandleValidPath());
+            HandleValidPath().Forget();
         }
 
         private bool TryWorldToCoord(Vector3 world, out Coord coord)
@@ -331,7 +332,7 @@ namespace LinkMatch.Game.Board
             }
         }
 
-        private IEnumerator HandleValidPath()
+        private async UniTask HandleValidPath(CancellationToken cancellationToken = default)
         {
             _isBusy = true;
             GameSignals.BoardBusy(true);
@@ -341,20 +342,20 @@ namespace LinkMatch.Game.Board
             foreach (var coord in _currentPath)
                 _components.Model.Set(coord, ChipType.None);
 
-            yield return _components.AnimationController.PopAndDestroyChips(_currentPath, _components.ChipViews);
+            await _components.AnimationController.PopAndDestroyChips(_currentPath, _components.ChipViews, cancellationToken);
             _currentPath.Clear();
 
             bool canContinue = _components.GameState.TryConsumeMove(removedCount);
 
             // Fill işlemini game over olsa bile tamamla (visual completeness için)
-            yield return _components.FillStrategy.Fill(
+            await _components.FillStrategy.Fill(
                 _components.Model, _components.ChipViews,
-                ToWorld, NextRandomType, SpawnChip, fallDuration
+                ToWorld, NextRandomType, SpawnChip, fallDuration, cancellationToken
             );
 
             // Game over olduysa shuffle yapmaya gerek yok, input zaten bloklu
             if (canContinue && !_components.ShuffleStrategy.HasAnyMove(_components.Model))
-                yield return ShuffleRoutine();
+                await ShuffleRoutine(cancellationToken);
 
             _isBusy = false;
             GameSignals.BoardBusy(false);
@@ -370,7 +371,7 @@ namespace LinkMatch.Game.Board
             return _components.ChipFactory.Create(position, type);
         }
 
-        private IEnumerator ShuffleRoutine()
+        private async UniTask ShuffleRoutine(CancellationToken cancellationToken = default)
         {
             _isBusy = true;
 
@@ -381,7 +382,7 @@ namespace LinkMatch.Game.Board
                 _components.ShuffleStrategy.Shuffle(_components.Model, _components.RandomGenerator);
 
                 UpdateChipVisuals();
-                yield return _components.AnimationController.PulseAllChips(_components.ChipViews, DEFAULT_PULSE_SCALE);
+                await _components.AnimationController.PulseAllChips(_components.ChipViews, DEFAULT_PULSE_SCALE, cancellationToken);
 
             } while (!_components.ShuffleStrategy.HasAnyMove(_components.Model) && retries < shuffleMaxRetries);
 

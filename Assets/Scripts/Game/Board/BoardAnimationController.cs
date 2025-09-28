@@ -1,5 +1,6 @@
-using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using LinkMatch.Game.Chips;
 using LinkMatch.Core.Utils;
@@ -23,7 +24,7 @@ namespace LinkMatch.Game.Board
             _chipFactory = chipFactory;
         }
 
-        public IEnumerator PopAndDestroyChips(IReadOnlyList<Coord> coords, Chip[,] chipViews)
+        public async UniTask PopAndDestroyChips(IReadOnlyList<Coord> coords, Chip[,] chipViews, CancellationToken cancellationToken = default)
         {
             foreach (var coord in coords)
             {
@@ -31,18 +32,18 @@ namespace LinkMatch.Game.Board
                 if (chip == null) continue;
 
                 chipViews[coord.Row, coord.Col] = null;
-                yield return StartPopAnimation(chip);
+                await StartPopAnimation(chip, cancellationToken);
                 _chipFactory.Despawn(chip);
             }
         }
 
-        public IEnumerator PulseAllChips(Chip[,] chipViews, float scale = DEFAULT_PULSE_SCALE)
+        public async UniTask PulseAllChips(Chip[,] chipViews, float scale = DEFAULT_PULSE_SCALE, CancellationToken cancellationToken = default)
         {
             var activeChips = GatherActiveChips(chipViews);
-            yield return PulseChips(activeChips, scale, _pulseDuration);
+            await PulseChips(activeChips, scale, _pulseDuration, cancellationToken);
         }
 
-        private IEnumerator StartPopAnimation(Chip chip)
+        private async UniTask StartPopAnimation(Chip chip, CancellationToken cancellationToken = default)
         {
             var originalScale = chip.transform.localScale;
             var targetScale = originalScale * POP_SCALE_MULTIPLIER;
@@ -53,17 +54,17 @@ namespace LinkMatch.Game.Board
                 elapsed += Time.deltaTime;
                 float progress = Mathf.Clamp01(elapsed / _popDuration);
                 chip.transform.localScale = Vector3.Lerp(originalScale, targetScale, progress);
-                yield return null;
+                await UniTask.Yield(cancellationToken);
             }
         }
 
-        private IEnumerator PulseChips(List<Transform> chips, float scale, float duration)
+        private async UniTask PulseChips(List<Transform> chips, float scale, float duration, CancellationToken cancellationToken = default)
         {
-            yield return ScaleChips(chips, NORMAL_SCALE, scale, duration);
-            yield return ScaleChips(chips, scale, NORMAL_SCALE, duration);
+            await ScaleChips(chips, NORMAL_SCALE, scale, duration, cancellationToken);
+            await ScaleChips(chips, scale, NORMAL_SCALE, duration, cancellationToken);
         }
 
-        private IEnumerator ScaleChips(List<Transform> chips, float fromScale, float toScale, float duration)
+        private async UniTask ScaleChips(List<Transform> chips, float fromScale, float toScale, float duration, CancellationToken cancellationToken = default)
         {
             var scaleVector = Vector3.one;
             float elapsed = 0f;
@@ -81,7 +82,7 @@ namespace LinkMatch.Game.Board
                     if (chips[i] != null)
                         chips[i].localScale = scaleVector;
                 }
-                yield return null;
+                await UniTask.Yield(cancellationToken);
             }
         }
 
